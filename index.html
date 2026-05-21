@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sales Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #1a1a24;
+    --border: #2a2a3a;
+    --accent: #ff6b2b;
+    --accent2: #ffb347;
+    --accent3: #4ecdc4;
+    --text: #e8e8f0;
+    --muted: #7a7a9a;
+    --green: #56d364;
+    --red: #f85149;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+  }
+
+  /* NAV */
+  nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.2rem 2.5rem;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 100;
+  }
+
+  .nav-logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 1.3rem;
+    letter-spacing: -0.02em;
+    color: var(--text);
+  }
+
+  .nav-logo span { color: var(--accent); }
+
+  .nav-tabs { display: flex; gap: 0.25rem; }
+
+  .nav-tab {
+    padding: 0.45rem 1rem;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.78rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.03em;
+  }
+
+  .nav-tab:hover { color: var(--text); border-color: var(--border); }
+  .nav-tab.active { color: var(--accent); border-color: var(--accent); background: rgba(255,107,43,0.08); }
+
+  /* PAGES */
+  .page { display: none; padding: 2rem 2.5rem; animation: fadeIn 0.3s ease; }
+  .page.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* HEADER SECTION */
+  .page-header { margin-bottom: 2rem; }
+  .page-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 2rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: var(--text);
+  }
+  .page-title span { color: var(--accent); }
+  .page-subtitle { color: var(--muted); font-size: 0.82rem; margin-top: 0.4rem; }
+
+  /* STAT CARDS */
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.4rem 1.6rem;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .stat-card:hover { border-color: var(--accent); }
+  .stat-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+  }
+
+  .stat-label { font-size: 0.72rem; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.6rem; }
+  .stat-value {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.9rem;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1;
+  }
+  .stat-value.accent { color: var(--accent); }
+  .stat-value.green { color: var(--green); }
+  .stat-value.teal { color: var(--accent3); }
+  .stat-sub { font-size: 0.72rem; color: var(--muted); margin-top: 0.4rem; }
+
+  /* CHART GRID */
+  .chart-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.25rem;
+    margin-bottom: 2rem;
+  }
+
+  .chart-grid.triple { grid-template-columns: 1fr 1fr 1fr; }
+  .chart-grid.wide { grid-template-columns: 2fr 1fr; }
+
+  .chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+  }
+
+  .chart-card.full { grid-column: 1 / -1; }
+
+  .chart-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.92rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin-bottom: 1.2rem;
+    color: var(--text);
+  }
+
+  .chart-title .badge {
+    display: inline-block;
+    background: rgba(255,107,43,0.15);
+    color: var(--accent);
+    font-size: 0.65rem;
+    padding: 2px 7px;
+    border-radius: 4px;
+    margin-left: 8px;
+    font-family: 'DM Mono', monospace;
+    font-weight: 400;
+  }
+
+  canvas { max-height: 280px; }
+
+  /* MODEL METRICS */
+  .metric-row {
+    display: flex; align-items: center;
+    padding: 0.9rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .metric-row:last-child { border-bottom: none; }
+  .metric-name { color: var(--muted); font-size: 0.8rem; flex: 1; }
+  .metric-bar-wrap { flex: 2; margin: 0 1rem; }
+  .metric-bar-bg { height: 5px; background: var(--border); border-radius: 99px; }
+  .metric-bar-fill { height: 5px; border-radius: 99px; background: linear-gradient(90deg, var(--accent), var(--accent2)); transition: width 1s ease; }
+  .metric-val { font-family: 'Syne', sans-serif; font-weight: 700; color: var(--text); font-size: 1rem; }
+
+  /* TABLE */
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+  }
+  .data-table th {
+    text-align: left;
+    padding: 0.7rem 1rem;
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+  }
+  .data-table td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid rgba(42,42,58,0.5);
+    color: var(--text);
+  }
+  .data-table tr:hover td { background: rgba(255,107,43,0.04); }
+
+  .pill {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+  }
+  .pill-green { background: rgba(86,211,100,0.15); color: var(--green); }
+  .pill-orange { background: rgba(255,107,43,0.15); color: var(--accent); }
+  .pill-teal { background: rgba(78,205,196,0.15); color: var(--accent3); }
+
+  /* PREDICT FORM */
+  .predict-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .form-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.8rem;
+  }
+  .form-title { font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 700; margin-bottom: 1.4rem; }
+
+  .form-group { margin-bottom: 1.1rem; }
+  .form-label { display: block; font-size: 0.72rem; color: var(--muted); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 0.4rem; }
+  .form-input, .form-select {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.65rem 0.9rem;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.82rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .form-input:focus, .form-select:focus { border-color: var(--accent); }
+  .form-select option { background: var(--surface2); }
+
+  .btn-predict {
+    width: 100%;
+    padding: 0.85rem;
+    background: var(--accent);
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.95rem;
+    cursor: pointer;
+    letter-spacing: -0.01em;
+    transition: all 0.2s;
+    margin-top: 0.5rem;
+  }
+  .btn-predict:hover { background: var(--accent2); transform: translateY(-1px); }
+  .btn-predict:active { transform: translateY(0); }
+
+  .result-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.8rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 300px;
+    text-align: center;
+  }
+
+  .result-idle { color: var(--muted); font-size: 0.82rem; }
+
+  .result-rating {
+    font-family: 'Syne', sans-serif;
+    font-size: 5rem;
+    font-weight: 800;
+    color: var(--accent);
+    line-height: 1;
+  }
+
+  .result-stars { font-size: 1.6rem; margin: 0.5rem 0; letter-spacing: 2px; color: var(--accent2); }
+  .result-label { color: var(--muted); font-size: 0.78rem; margin-top: 0.5rem; }
+
+  .result-bar-wrap { width: 80%; margin-top: 1.5rem; }
+  .result-bar-bg { height: 8px; background: var(--border); border-radius: 99px; }
+  .result-bar-fill {
+    height: 8px; border-radius: 99px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    transition: width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .result-range { display: flex; justify-content: space-between; font-size: 0.65rem; color: var(--muted); margin-top: 0.3rem; }
+
+  /* LOADING */
+  .loading { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 0.8rem; }
+  .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+
+  /* FOOTER */
+  footer { text-align: center; padding: 2rem; color: var(--muted); font-size: 0.72rem; border-top: 1px solid var(--border); margin-top: 2rem; }
+
+  @media (max-width: 900px) {
+    .chart-grid, .chart-grid.wide, .chart-grid.triple { grid-template-columns: 1fr; }
+    .predict-layout { grid-template-columns: 1fr; }
+    nav { flex-direction: column; gap: 0.8rem; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">Amazon<span>.</span>Intelligence</div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showPage('overview')">Overview</button>
+    <button class="nav-tab" onclick="showPage('eda')">EDA</button>
+    <button class="nav-tab" onclick="showPage('model')">Model</button>
+    <button class="nav-tab" onclick="showPage('predict')">Predict</button>
+  </div>
+</nav>
+
+<!-- OVERVIEW PAGE -->
+<div id="page-overview" class="page active">
+  <div class="page-header">
+    <div class="page-title">Sales <span>Intelligence</span></div>
+    <div class="page-subtitle">Amazon product dataset — XGBoost rating prediction engine</div>
+  </div>
+
+  <div class="stat-grid" id="stat-grid">
+    <div class="stat-card">
+      <div class="stat-label">Total Products</div>
+      <div class="stat-value accent" id="stat-total">—</div>
+      <div class="stat-sub">in dataset</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Avg. Rating</div>
+      <div class="stat-value green" id="stat-rating">—</div>
+      <div class="stat-sub">out of 5.0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Avg. Discount</div>
+      <div class="stat-value accent" id="stat-discount">—</div>
+      <div class="stat-sub">across all products</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Avg. Price</div>
+      <div class="stat-value teal" id="stat-price">—</div>
+      <div class="stat-sub">discounted (₹)</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Total Reviews</div>
+      <div class="stat-value" id="stat-reviews">—</div>
+      <div class="stat-sub">user ratings</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Model Test R²</div>
+      <div class="stat-value green" id="stat-r2">—</div>
+      <div class="stat-sub">prediction accuracy</div>
+    </div>
+  </div>
+
+  <div class="chart-grid wide">
+    <div class="chart-card">
+      <div class="chart-title">Rating Distribution <span class="badge">EDA</span></div>
+      <canvas id="overview-rating-chart"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Model Performance</div>
+      <div id="overview-metrics"></div>
+    </div>
+  </div>
+</div>
+
+<!-- EDA PAGE -->
+<div id="page-eda" class="page">
+  <div class="page-header">
+    <div class="page-title">Exploratory <span>Analysis</span></div>
+    <div class="page-subtitle">Distribution, category insights, and feature correlations</div>
+  </div>
+
+  <div class="chart-grid">
+    <div class="chart-card">
+      <div class="chart-title">Top Categories by Product Count</div>
+      <canvas id="cat-chart"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Price Distribution</div>
+      <canvas id="price-chart"></canvas>
+    </div>
+  </div>
+
+  <div class="chart-grid">
+    <div class="chart-card">
+      <div class="chart-title">Discount % vs Avg Rating <span class="badge">CORRELATION</span></div>
+      <canvas id="disc-rating-chart"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Rating Distribution</div>
+      <canvas id="eda-rating-chart"></canvas>
+    </div>
+  </div>
+
+  <div class="chart-card" style="margin-bottom:1.25rem;">
+    <div class="chart-title">Top 10 Most Reviewed Products</div>
+    <table class="data-table" id="top-reviewed-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Product Name</th>
+          <th>Review Count</th>
+          <th>Rating</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- MODEL PAGE -->
+<div id="page-model" class="page">
+  <div class="page-header">
+    <div class="page-title">Model <span>Performance</span></div>
+    <div class="page-subtitle">XGBoost regressor — training diagnostics and predictions vs actuals</div>
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat-card">
+      <div class="stat-label">Train R²</div>
+      <div class="stat-value green" id="m-train-r2">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Test R²</div>
+      <div class="stat-value accent" id="m-test-r2">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Test RMSE</div>
+      <div class="stat-value" id="m-rmse">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Train Samples</div>
+      <div class="stat-value teal" id="m-train-n">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Test Samples</div>
+      <div class="stat-value" id="m-test-n">—</div>
+    </div>
+  </div>
+
+  <div class="chart-grid">
+    <div class="chart-card full">
+      <div class="chart-title">Actual vs Predicted Ratings <span class="badge">TEST SET SAMPLE</span></div>
+      <canvas id="avp-chart" style="max-height:320px;"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- PREDICT PAGE -->
+<div id="page-predict" class="page">
+  <div class="page-header">
+    <div class="page-title">Live <span>Prediction</span></div>
+    <div class="page-subtitle">Enter product details to predict its Amazon rating</div>
+  </div>
+
+  <div class="predict-layout">
+    <div class="form-card">
+      <div class="form-title">Product Details</div>
+
+      <div class="form-group">
+        <label class="form-label">Product Name</label>
+        <input class="form-input" id="p-name" type="text" placeholder="e.g. USB-C Fast Charging Cable" value="USB-C Fast Charging Cable 3ft">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Category</label>
+        <select class="form-select" id="p-category">
+          <option>Electronics</option>
+          <option>Computers&Accessories</option>
+          <option>Home&Kitchen</option>
+          <option>MusicalInstruments</option>
+          <option>OfficeProducts</option>
+          <option>Toys&Games</option>
+          <option>Health&PersonalCare</option>
+          <option>Sports</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Actual Price (₹)</label>
+        <input class="form-input" id="p-actual" type="number" value="1299" min="1">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Discounted Price (₹)</label>
+        <input class="form-input" id="p-discounted" type="number" value="649" min="1">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Discount Percentage (%)</label>
+        <input class="form-input" id="p-discount-pct" type="number" value="50" min="0" max="100">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Rating Count (# reviews)</label>
+        <input class="form-input" id="p-rating-count" type="number" value="2400" min="0">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">About Product (optional)</label>
+        <input class="form-input" id="p-about" type="text" placeholder="Short description...">
+      </div>
+
+      <button class="btn-predict" onclick="runPredict()">→ Predict Rating</button>
+    </div>
+
+    <div class="result-panel" id="result-panel">
+      <div class="result-idle" id="result-idle">
+        Fill in the product details and hit Predict
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>Amazon Sales Intelligence Dashboard · XGBoost Model · Flask</footer>
+
+<script>
+// ==================
+// NAVIGATION
+// ==================
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  event.target.classList.add('active');
+}
+
+// ==================
+// CHART DEFAULTS
+// ==================
+Chart.defaults.color = '#7a7a9a';
+Chart.defaults.borderColor = '#2a2a3a';
+Chart.defaults.font.family = "'DM Mono', monospace";
+Chart.defaults.font.size = 11;
+
+const PALETTE = ['#ff6b2b','#ffb347','#4ecdc4','#a29bfe','#fd79a8','#55efc4','#fdcb6e','#e17055','#74b9ff','#81ecec'];
+
+function makeBarChart(id, labels, data, color) {
+  const ctx = document.getElementById(id);
+  if (!ctx) return;
+  return new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        data,
+        backgroundColor: color || 'rgba(255,107,43,0.7)',
+        borderColor: color || '#ff6b2b',
+        borderWidth: 1,
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false } },
+        y: { grid: { color: '#1a1a24' } }
+      }
+    }
+  });
+}
+
+function makeDoughnut(id, labels, data) {
+  const ctx = document.getElementById(id);
+  if (!ctx) return;
+  return new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels,
+      datasets: [{ data, backgroundColor: PALETTE, borderWidth: 0 }]
+    },
+    options: {
+      responsive: true,
+      cutout: '65%',
+      plugins: {
+        legend: { position: 'right', labels: { boxWidth: 10, padding: 14 } }
+      }
+    }
+  });
+}
+
+// ==================
+// LOAD DATA
+// ==================
+async function loadOverview() {
+  const res = await fetch('/api/overview');
+  const d = await res.json();
+
+  document.getElementById('stat-total').textContent = d.stats.total_products.toLocaleString();
+  document.getElementById('stat-rating').textContent = d.stats.avg_rating;
+  document.getElementById('stat-discount').textContent = d.stats.avg_discount + '%';
+  document.getElementById('stat-price').textContent = '₹' + Math.round(d.stats.avg_discounted_price).toLocaleString();
+  document.getElementById('stat-reviews').textContent = (d.stats.total_reviews / 1000).toFixed(0) + 'K';
+  document.getElementById('stat-r2').textContent = d.model.test_r2;
+
+  document.getElementById('m-train-r2').textContent = d.model.train_r2;
+  document.getElementById('m-test-r2').textContent = d.model.test_r2;
+  document.getElementById('m-rmse').textContent = d.model.test_rmse;
+  document.getElementById('m-train-n').textContent = d.model.train_samples.toLocaleString();
+  document.getElementById('m-test-n').textContent = d.model.test_samples.toLocaleString();
+
+  // Overview metrics panel
+  const metrics = [
+    { name: 'Train R²', val: d.model.train_r2, pct: d.model.train_r2 * 100 },
+    { name: 'Test R²', val: d.model.test_r2, pct: d.model.test_r2 * 100 },
+    { name: 'RMSE (lower better)', val: d.model.test_rmse, pct: Math.max(0, 100 - d.model.test_rmse * 100) },
+  ];
+
+  const el = document.getElementById('overview-metrics');
+  el.innerHTML = metrics.map(m => `
+    <div class="metric-row">
+      <span class="metric-name">${m.name}</span>
+      <div class="metric-bar-wrap">
+        <div class="metric-bar-bg"><div class="metric-bar-fill" style="width:${m.pct.toFixed(1)}%"></div></div>
+      </div>
+      <span class="metric-val">${m.val}</span>
+    </div>
+  `).join('');
+}
+
+async function loadRatingDist(chartId) {
+  const res = await fetch('/api/eda/rating_distribution');
+  const d = await res.json();
+  makeBarChart(chartId, Object.keys(d), Object.values(d), 'rgba(78,205,196,0.7)');
+}
+
+async function loadEDA() {
+  // categories
+  const catRes = await fetch('/api/eda/top_categories');
+  const cats = await catRes.json();
+  makeBarChart('cat-chart', Object.keys(cats), Object.values(cats));
+
+  // price dist
+  const priceRes = await fetch('/api/eda/price_distribution');
+  const prices = await priceRes.json();
+  makeDoughnut('price-chart', Object.keys(prices), Object.values(prices));
+
+  // discount vs rating
+  const discRes = await fetch('/api/eda/discount_vs_rating');
+  const disc = await discRes.json();
+  const ctx = document.getElementById('disc-rating-chart');
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: Object.keys(disc),
+      datasets: [{
+        data: Object.values(disc),
+        borderColor: '#ff6b2b',
+        backgroundColor: 'rgba(255,107,43,0.1)',
+        borderWidth: 2,
+        pointBackgroundColor: '#ff6b2b',
+        pointRadius: 5,
+        fill: true,
+        tension: 0.3
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { min: 0, max: 5, grid: { color: '#1a1a24' } },
+        x: { grid: { display: false } }
+      }
+    }
+  });
+
+  loadRatingDist('eda-rating-chart');
+
+  // top reviewed table
+  const revRes = await fetch('/api/eda/top_reviewed');
+  const rows = await revRes.json();
+  const tbody = document.querySelector('#top-reviewed-table tbody');
+  tbody.innerHTML = rows.map((r, i) => {
+    const ratingClass = r.rating >= 4 ? 'pill-green' : r.rating >= 3 ? 'pill-orange' : 'pill-teal';
+    return `<tr>
+      <td>${i + 1}</td>
+      <td>${r.product_name}...</td>
+      <td>${Number(r.rating_count).toLocaleString()}</td>
+      <td><span class="pill ${ratingClass}">${r.rating}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+async function loadModelPage() {
+  const res = await fetch('/api/model/actual_vs_predicted');
+  const data = await res.json();
+  if (!data.length) return;
+
+  const labels = data.map((_, i) => i + 1);
+  const actuals = data.map(d => d.actual);
+  const predicted = data.map(d => d.predicted);
+
+  const ctx = document.getElementById('avp-chart');
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Actual',
+          data: actuals,
+          borderColor: '#4ecdc4',
+          backgroundColor: 'transparent',
+          borderWidth: 1.5,
+          pointRadius: 2,
+          tension: 0.2
+        },
+        {
+          label: 'Predicted',
+          data: predicted,
+          borderColor: '#ff6b2b',
+          backgroundColor: 'transparent',
+          borderWidth: 1.5,
+          pointRadius: 2,
+          tension: 0.2,
+          borderDash: [4, 3]
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: {
+          labels: { usePointStyle: true, padding: 16 }
+        }
+      },
+      scales: {
+        y: { min: 0, max: 5.5, grid: { color: '#1a1a24' } },
+        x: { grid: { display: false } }
+      }
+    }
+  });
+}
+
+// ==================
+// PREDICT
+// ==================
+async function runPredict() {
+  const panel = document.getElementById('result-panel');
+  panel.innerHTML = '<div class="loading"><div class="spinner"></div> Running model...</div>';
+
+  const body = {
+    product_name: document.getElementById('p-name').value,
+    category: document.getElementById('p-category').value,
+    actual_price: document.getElementById('p-actual').value,
+    discounted_price: document.getElementById('p-discounted').value,
+    discount_percentage: document.getElementById('p-discount-pct').value,
+    rating_count: document.getElementById('p-rating-count').value,
+    about_product: document.getElementById('p-about').value,
+  };
+
+  try {
+    const res = await fetch('/api/predict', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+
+    if (data.error) {
+      panel.innerHTML = `<div style="color:var(--red);font-size:0.85rem;">Error: ${data.error}</div>`;
+      return;
+    }
+
+    const rating = data.predicted_rating;
+    const pct = ((rating / 5) * 100).toFixed(1);
+    const stars = '★'.repeat(Math.round(rating)) + '☆'.repeat(5 - Math.round(rating));
+
+    panel.innerHTML = `
+      <div style="font-size:0.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.5rem;">Predicted Rating</div>
+      <div class="result-rating">${rating}</div>
+      <div class="result-stars">${stars}</div>
+      <div class="result-label">out of 5.0</div>
+      <div class="result-bar-wrap">
+        <div class="result-bar-bg">
+          <div class="result-bar-fill" id="rbar" style="width:0%"></div>
+        </div>
+        <div class="result-range"><span>1.0</span><span>5.0</span></div>
+      </div>
+    `;
+    setTimeout(() => {
+      document.getElementById('rbar').style.width = pct + '%';
+    }, 50);
+
+  } catch (err) {
+    panel.innerHTML = `<div style="color:var(--red);">Request failed. Is the server running?</div>`;
+  }
+}
+
+// ==================
+// INIT
+// ==================
+loadOverview();
+loadRatingDist('overview-rating-chart');
+loadEDA();
+loadModelPage();
+</script>
+</body>
+</html>
