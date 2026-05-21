@@ -4,20 +4,6 @@
 
 XGBoost rating prediction and Flask dashboard for the Amazon product dataset.
 
-## Project Structure
-
-
-amazon_sales/
-├── train_model.py          # Data cleaning, EDA, model training
-├── app.py                  # Flask dashboard server
-├── requirements.txt
-├── amazon.csv              # ← PUT YOUR DATASET HERE
-├── templates/
-│   └── index.html          # Dashboard UI
-├── amazon_final_model.pkl  # Generated after training
-├── eda_stats.json          # Generated after training
-└── model_metrics.json      # Generated after training
-```
 
 ## Setup
 
